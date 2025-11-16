@@ -11,18 +11,14 @@ const app = express();
 
 // Configure CORS to allow requests from your frontend
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5000', 'https://task8mern.netlify.app'],
+  origin: ['http://localhost:5173', 'http://localhost:5000', 'https://task9mern.netlify.app'],
   credentials: true,
   optionsSuccessStatus: 200
 }));
+// app.use(cors());
+
 
 app.use(express.json());
-
-// Serve static files from the root directory
-app.use(express.static(path.join(__dirname, '..')));
-
-// Serve frontend build files
-app.use('/frontend', express.static(path.join(__dirname, '../frontend/dist')));
 
 // API routes
 app.use('/api/tasks', tasksRouter);
@@ -30,14 +26,16 @@ app.use('/api/tasks', tasksRouter);
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Backend is running' }));
 
-// Serve the main index.html for the root route
+// For all other routes, return a simple message
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../index.html'));
-});
-
-// For any other routes, serve the frontend app
-app.get('/frontend/*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  res.json({ 
+    message: 'Todo App Backend API', 
+    version: '1.0.0',
+    endpoints: {
+      tasks: '/api/tasks',
+      health: '/api/health'
+    }
+  });
 });
 
 // error handler (should be last)
@@ -49,7 +47,15 @@ const PORT = process.env.PORT || 5000;
 // Connect to database and start server
 connectDB()
   .then(() => {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        console.log('Process terminated');
+      });
+    });
   })
   .catch((error) => {
     console.error('Failed to connect to database:', error.message);
